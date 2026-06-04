@@ -29,6 +29,7 @@
             border-radius: 8px;
             border: 1px solid #ddd;
             align-items: center;
+            flex-wrap: wrap;
         }
         select {
             padding: 10px;
@@ -37,6 +38,24 @@
             border: 1px solid #ccc;
             cursor: pointer;
             flex-grow: 1;
+        }
+        #offlineBtn {
+            padding: 10px 15px;
+            font-size: 16px;
+            border-radius: 6px;
+            border: none;
+            cursor: pointer;
+            background-color: #3498db;
+            color: white;
+            font-weight: bold;
+            transition: background-color 0.3s;
+        }
+        #offlineBtn:hover {
+            background-color: #2980b9;
+        }
+        #offlineBtn:disabled {
+            background-color: #95a5a6;
+            cursor: not-allowed;
         }
         .measurement-info {
             background-color: #eafaf1;
@@ -48,6 +67,7 @@
             justify-content: space-between;
             align-items: center;
             flex-grow: 2;
+            width: 100%;
         }
         .measurement-info h3 {
             margin: 0;
@@ -86,9 +106,11 @@
         
         <div class="controls">
             <select id="matSelector" onchange="changeMat()">
-                <option value="https://i.imgur.com/809nJsq.jpeg">Küçük Yıldızlar Matı</option>
-                <option value="https://i.imgur.com/tAMgUHC.jpeg">Yıldızlar Matı</option>
+                <option value="mat1">Küçük Yıldızlar Matı</option>
+                <option value="mat2">Yıldızlar Matı</option>
             </select>
+            
+            <button id="offlineBtn" onclick="saveToOffline()">Görselleri Tablete Kaydet</button>
 
             <div class="measurement-info">
                 <div>
@@ -99,7 +121,7 @@
         </div>
 
         <div id="canvas-wrapper">
-            <img id="matImage" src="https://i.imgur.com/809nJsq.jpeg" alt="WRO Mat">
+            <img id="matImage" alt="WRO Mat" crossorigin="anonymous">
             <canvas id="measureCanvas"></canvas>
         </div>
     </div>
@@ -114,11 +136,77 @@
         let startX = 0;
         let startY = 0;
 
+        const matUrls = {
+            'mat1': 'https://i.imgur.com/809nJsq.jpeg',
+            'mat2': 'https://i.imgur.com/tAMgUHC.jpeg'
+        };
+
         function changeMat() {
             const selector = document.getElementById('matSelector');
-            img.src = selector.value;
+            const selectedVal = selector.value;
+            
+            const savedImage = localStorage.getItem(selectedVal);
+            if (savedImage) {
+                img.src = savedImage;
+            } else {
+                img.src = matUrls[selectedVal];
+            }
+
             ctx.clearRect(0, 0, canvas.width, canvas.height);
             resultText.innerText = "0.0 cm";
+        }
+
+        function saveToOffline() {
+            const offlineBtn = document.getElementById('offlineBtn');
+            offlineBtn.innerText = "Kaydediliyor...";
+            offlineBtn.disabled = true;
+
+            const matsToSave = ['mat1', 'mat2'];
+            let savedCount = 0;
+            let errorCount = 0;
+
+            matsToSave.forEach(matId => {
+                const tempImg = new Image();
+                tempImg.crossOrigin = "Anonymous";
+                
+                tempImg.onload = function() {
+                    const tempCanvas = document.createElement('canvas');
+                    tempCanvas.width = tempImg.width;
+                    tempCanvas.height = tempImg.height;
+                    const tCtx = tempCanvas.getContext('2d');
+                    tCtx.drawImage(tempImg, 0, 0);
+                    
+                    try {
+                        const dataURL = tempCanvas.toDataURL('image/jpeg', 0.8);
+                        localStorage.setItem(matId, dataURL);
+                        savedCount++;
+                    } catch (e) {
+                        console.error("Kayıt hatası:", e);
+                        errorCount++;
+                    }
+                    checkDone();
+                };
+
+                tempImg.onerror = function() {
+                    errorCount++;
+                    checkDone();
+                };
+
+                tempImg.src = matUrls[matId];
+            });
+
+            function checkDone() {
+                if (savedCount + errorCount === matsToSave.length) {
+                    if (errorCount === 0) {
+                        alert("Görseller tablete kaydedildi. Artık internet olmadan kullanabilirsiniz.");
+                        offlineBtn.innerText = "Kaydedildi";
+                    } else {
+                        alert("Tarayıcı güvenliği (CORS) veya boyut sınırları nedeniyle kayıt başarısız oldu.");
+                        offlineBtn.innerText = "Tekrar Dene";
+                        offlineBtn.disabled = false;
+                    }
+                }
+            }
         }
 
         function resizeCanvas() {
@@ -128,10 +216,6 @@
 
         img.addEventListener('load', resizeCanvas);
         window.addEventListener('resize', resizeCanvas);
-
-        if(img.complete) {
-            resizeCanvas();
-        }
 
         canvas.addEventListener('mousedown', function(e) {
             isDrawing = true;
@@ -172,7 +256,6 @@
             isDrawing = false;
         });
 
-        // Dokunmatik ekran desteği (Tablet/Telefon için)
         canvas.addEventListener('touchstart', function(e) {
             if(e.touches.length > 0) {
                 isDrawing = true;
@@ -211,12 +294,16 @@
             const dy = y - startY;
             const distanceInPixels = Math.sqrt(dx * dx + dy * dy);
             
-            // Masanın gerçek uzunluğu 236.2 cm
             const cmPerPixel = 236.2 / canvas.width; 
             const realDistanceCm = distanceInPixels * cmPerPixel;
 
             resultText.innerText = realDistanceCm.toFixed(1) + " cm";
         }
+
+        // Sayfa yüklendiğinde varsayılan matı aç
+        window.onload = function() {
+            changeMat();
+        };
     </script>
 </body>
 </html>
