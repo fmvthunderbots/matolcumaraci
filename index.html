@@ -110,7 +110,7 @@
                 <option value="mat2">Yıldızlar Matı</option>
             </select>
             
-            <button id="offlineBtn" onclick="saveToOffline()">Görselleri Tablete Kaydet</button>
+            <button id="offlineBtn" onclick="saveToOffline()">Matları Kaydet</button>
 
             <div class="measurement-info">
                 <div>
@@ -198,7 +198,7 @@
             function checkDone() {
                 if (savedCount + errorCount === matsToSave.length) {
                     if (errorCount === 0) {
-                        alert("Görseller tablete kaydedildi. Artık internet olmadan kullanabilirsiniz.");
+                        alert("Matlar kaydedildi. Artık internet olmadan kullanabilirsiniz.");
                         offlineBtn.innerText = "Kaydedildi";
                     } else {
                         alert("Tarayıcı güvenliği (CORS) veya boyut sınırları nedeniyle kayıt başarısız oldu.");
